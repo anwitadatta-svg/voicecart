@@ -1,0 +1,12 @@
+[
+ {"id":1,"name":"Black T-Shirt","price":18.0,"category":"clothing"},
+ {"id":2,"name":"White T-Shirt","price":16.0,"category":"clothing"},
+ {"id":3,"name":"Blue Jeans","price":39.0,"category":"clothing"},
+ {"id":4,"name":"White Sneakers","price":45.0,"category":"shoes"},
+ {"id":5,"name":"Running Shoes","price":60.0,"category":"shoes"},
+ {"id":6,"name":"Wireless Earbuds","price":29.0,"category":"electronics"},
+ {"id":7,"name":"Phone Charger","price":12.0,"category":"electronics"},
+ {"id":8,"name":"Water Bottle","price":10.0,"category":"home"},
+ {"id":9,"name":"Backpack","price":35.0,"category":"bags"},
+ {"id":10,"name":"Coffee Mug","price":8.0,"category":"home"}
+]

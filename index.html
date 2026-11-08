@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VoiceCart</title>
+<style>
+  :root {
+    --ink: #1d2433;
+    --muted: #5d6678;
+    --paper: #f6f8fb;
+    --panel: #ffffff;
+    --line: #d9dfe9;
+    --accent: #0b5fff;
+    --good: #0a7a4b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.8rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .row { display: flex; gap: 8px; }
+  button {
+    font: inherit;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.listening { background: #d92d20; border-color: #d92d20; color: #fff; }
+  button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #8ab4ff; outline-offset: 2px; }
+  input[type=text] {
+    flex: 1; font: inherit; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink);
+  }
+  #log { margin: 20px 0; display: grid; gap: 8px; }
+  .msg { padding: 10px 14px; border-radius: 10px; max-width: 90%; }
+  .you { background: #e6eefc; justify-self: end; }
+  .agent { background: var(--panel); border: 1px solid var(--line); }
+  .cart { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .cart h2 { font-size: 1.05rem; margin: 0 0 8px; }
+  .cart ul { list-style: none; margin: 0; padding: 0; }
+  .cart li { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .cart .total { display: flex; justify-content: space-between; font-weight: 700; padding-top: 8px; }
+  .empty { color: var(--muted); }
+  #pay { display: none; margin-top: 12px; text-align: center; text-decoration: none; background: var(--good); color: #fff; padding: 12px; border-radius: 8px; font-weight: 600; }
+  #status { color: var(--muted); min-height: 1.5em; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>VoiceCart &#128722;</h1>
+  <p class="sub">Press Speak and say something like "add running shoes to my cart".</p>
+
+  <div class="row">
+    <button id="speak" class="primary">&#127908; Speak</button>
+    <button id="reset">Clear cart</button>
+    <button id="payNow">Checkout</button>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <input id="typed" type="text" placeholder="Or type a command and press Enter">
+    <button id="send">Send</button>
+  </div>
+  <div id="status"></div>
+
+  <div id="log" aria-live="polite"></div>
+
+  <section class="cart">
+    <h2>Your cart</h2>
+    <div id="cartBody" class="empty">Nothing here yet.</div>
+    <a id="pay" href="#" target="_blank" rel="noopener">Pay with PayPal</a>
+  </section>
+</main>
+
+<script>
+const log = document.getElementById("log");
+const statusEl = document.getElementById("status");
+const speakBtn = document.getElementById("speak");
+const typed = document.getElementById("typed");
+const pay = document.getElementById("pay");
+
+function addMsg(who, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + (who === "You" ? "you" : "agent");
+  d.textContent = who + ": " + text;
+  log.appendChild(d);
+  d.scrollIntoView({ behavior: "smooth", block: "end" });
+}
+
+function renderCart(cart) {
+  const body = document.getElementById("cartBody");
+  if (!cart || !cart.items.length) {
+    body.className = "empty";
+    body.textContent = "Nothing here yet.";
+    return;
+  }
+  body.className = "";
+  const ul = document.createElement("ul");
+  cart.items.forEach(i => {
+    const li = document.createElement("li");
+    li.textContent = i.qty + " \u00D7 " + i.name;
+    const price = document.createElement("span");
+    price.textContent = "$" + i.line_total.toFixed(2);
+    li.appendChild(price);
+    ul.appendChild(li);
+  });
+  const total = document.createElement("div");
+  total.className = "total";
+  total.innerHTML = "<span>Total</span><span>$" + cart.total.toFixed(2) + "</span>";
+  body.replaceChildren(ul, total);
+}
+
+function speak(text) {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+}
+
+async function sendText(text) {
+  text = text.trim();
+  if (!text) return;
+  addMsg("You", text);
+  statusEl.textContent = "Thinking...";
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text })
+    });
+    if (!res.ok) throw new Error("Server returned " + res.status);
+    const data = await res.json();
+    addMsg("Agent", data.reply);
+    renderCart(data.cart);
+    speak(data.reply);
+    if (data.checkout_url) {
+      pay.href = data.checkout_url;
+      pay.style.display = "block";
+    }
+    statusEl.textContent = "";
+  } catch (err) {
+    statusEl.textContent = "Could not reach the server: " + err.message;
+  }
+}
+
+// Voice input (Chrome / Edge)
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+if (SR) {
+  rec = new SR();
+  rec.lang = "en-IN";
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  rec.onstart = () => { speakBtn.classList.add("listening"); statusEl.textContent = "Listening..."; };
+  rec.onend = () => { speakBtn.classList.remove("listening"); };
+  rec.onerror = e => { statusEl.textContent = "Microphone error: " + e.error; };
+  rec.onresult = e => sendText(e.results[0][0].transcript);
+}
+
+speakBtn.onclick = () => {
+  if (!rec) { statusEl.textContent = "Voice input needs Chrome or Edge. You can type instead."; return; }
+  rec.start();
+};
+document.getElementById("send").onclick = () => { sendText(typed.value); typed.value = ""; };
+typed.addEventListener("keydown", e => { if (e.key === "Enter") { sendText(typed.value); typed.value = ""; } });
+document.getElementById("payNow").onclick = async () => {
+  statusEl.textContent = "Creating PayPal order...";
+  try {
+    const res = await fetch("/checkout", { method: "POST" });
+    const data = await res.json();
+    if (data.approval_url) {
+      pay.href = data.approval_url;
+      pay.style.display = "block";
+      statusEl.textContent = "Ready. Click Pay with PayPal below.";
+      pay.scrollIntoView({ behavior: "smooth", block: "end" });
+    } else {
+      statusEl.textContent = data.error || "Checkout failed.";
+    }
+  } catch (err) {
+    statusEl.textContent = "Could not reach the server: " + err.message;
+  }
+};
+document.getElementById("reset").onclick = async () => {
+  await fetch("/reset", { method: "POST" });
+  renderCart(null);
+  pay.style.display = "none";
+  log.replaceChildren();
+};
+</script>
+</body>
+</html>
