@@ -1,4 +1,7 @@
 # VoiceCart
+**Live demo:** https://voicecart-wdu1.onrender.com
+
+*The free server sleeps when idle, so the first load can take about 50 seconds.*
 
 A voice-activated shopping agent with PayPal checkout, built for the PayPal AI Hackathon 2026 (agentic commerce).
 
