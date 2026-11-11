@@ -1,6 +1,6 @@
 import json
 import os
-
+import re
 import openai
 import requests
 from dotenv import load_dotenv
@@ -236,6 +236,29 @@ Use search_products to find the product id before add_to_cart or remove_from_car
 Prices are in USD. Speech recognition can mishear words, so match the closest catalog item.
 When the user wants to pay, confirm the total first, then call the checkout tool as soon as they say yes.
 Never say you are starting a payment unless you actually called the checkout tool in that same turn."""
+def clean_agent_reply(reply):
+    import re
+
+    reply = re.sub(
+        r"<think>.*?</think>",
+        "",
+        reply,
+        flags=re.IGNORECASE | re.DOTALL
+    )
+
+    reply = re.sub(r"</?think>", "", reply, flags=re.IGNORECASE)
+
+    sentences = re.split(r'(?<=[.!?])\s+', reply.strip())
+
+    cleaned = []
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if sentence and sentence.lower() not in [
+            s.lower() for s in cleaned
+        ]:
+            cleaned.append(sentence)
+
+    return " ".join(cleaned).strip()
 
 
 # ------------------------------------------------------------------
@@ -246,45 +269,68 @@ class ChatIn(BaseModel):
 
 
 def run_agent(user_text):
-    messages = [{"role": "system", "content": SYSTEM}] + HISTORY[-10:] + [{"role": "user", "content": user_text}]
+    messages = (
+        [{"role": "system", "content": SYSTEM}]
+        + HISTORY[-10:]
+        + [{"role": "user", "content": user_text}]
+    )
+
     checkout_url = None
 
-    for _ in range(6):  # max tool rounds
+    for _ in range(6):
         resp = None
-        for attempt in range(2):  # retry once if the model makes up a tool name
+
+        for attempt in range(2):
             try:
                 resp = client.chat.completions.create(
                     model=MODEL,
                     messages=messages,
-                    tools=TOOLS,  # sent on EVERY call
+                    tools=TOOLS,
                     temperature=0,
                 )
                 break
             except openai.BadRequestError as e:
                 print(f"[LLM bad request, attempt {attempt + 1}] {e}")
+
         if resp is None:
-            return "Sorry, I didn't catch that. Could you say it again?", None
+            return "Sorry, I couldn't process that. Please try again.", None
 
         msg = resp.choices[0].message
-        if not msg.tool_calls:
-            return (msg.content or "Done."), checkout_url
 
-        messages.append(
-            {
-                "role": "assistant",
-                "content": msg.content or "",
-                "tool_calls": [
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {"name": tc.function.name, "arguments": tc.function.arguments},
-                    }
-                    for tc in msg.tool_calls
-                ],
-            }
-        )
+        # If the AI has finished using tools, return its reply.
+        if not msg.tool_calls:
+            reply = clean_agent_reply(msg.content or "Done.")
+
+            if checkout_url:
+                reply = (
+                    "Your PayPal checkout link is ready. "
+                    "Please approve the payment on PayPal "
+                    "to complete your order."
+                )
+
+            return reply, checkout_url
+
+        # Save the assistant tool-call message.
+        messages.append({
+            "role": "assistant",
+            "content": msg.content or "",
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    },
+                }
+                for tc in msg.tool_calls
+            ],
+        })
+
+        # Execute the requested tools.
         for tc in msg.tool_calls:
             fn = FUNCS.get(tc.function.name)
+
             if fn is None:
                 result = {"error": f"Unknown tool {tc.function.name}"}
             else:
@@ -293,13 +339,17 @@ def run_agent(user_text):
                     result = fn(**args)
                 except Exception as e:
                     result = {"error": str(e)}
+
             if isinstance(result, dict) and result.get("approval_url"):
                 checkout_url = result["approval_url"]
-            messages.append({"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result)})
+
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.id,
+                "content": json.dumps(result),
+            })
 
     return "Sorry, that took too many steps. Please try again.", checkout_url
-
-
 @app.post("/chat")
 def chat(body: ChatIn):
     try:
@@ -310,7 +360,9 @@ def chat(body: ChatIn):
     HISTORY.append({"role": "user", "content": body.text})
     HISTORY.append({"role": "assistant", "content": reply})
     return {"reply": reply, "cart": cart_summary(), "checkout_url": url}
-
+@app.get("/cart")
+def get_cart():
+    return cart_summary()
 
 @app.post("/checkout")
 def checkout_now():

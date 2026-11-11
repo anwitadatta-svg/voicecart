@@ -4,196 +4,484 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VoiceCart</title>
+
 <style>
-  :root {
-    --ink: #1d2433;
-    --muted: #5d6678;
-    --paper: #f6f8fb;
-    --panel: #ffffff;
-    --line: #d9dfe9;
-    --accent: #0b5fff;
-    --good: #0a7a4b;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: "Segoe UI", system-ui, sans-serif;
-    background: var(--paper);
-    color: var(--ink);
-    line-height: 1.5;
-  }
-  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { font-size: 1.8rem; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 20px; }
-  .row { display: flex; gap: 8px; }
-  button {
-    font: inherit;
-    border: 1px solid var(--line);
-    background: var(--panel);
-    color: var(--ink);
-    padding: 10px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-  button.listening { background: #d92d20; border-color: #d92d20; color: #fff; }
-  button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #8ab4ff; outline-offset: 2px; }
-  input[type=text] {
-    flex: 1; font: inherit; padding: 10px 12px;
-    border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink);
-  }
-  #log { margin: 20px 0; display: grid; gap: 8px; }
-  .msg { padding: 10px 14px; border-radius: 10px; max-width: 90%; }
-  .you { background: #e6eefc; justify-self: end; }
-  .agent { background: var(--panel); border: 1px solid var(--line); }
-  .cart { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
-  .cart h2 { font-size: 1.05rem; margin: 0 0 8px; }
-  .cart ul { list-style: none; margin: 0; padding: 0; }
-  .cart li { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--line); }
-  .cart .total { display: flex; justify-content: space-between; font-weight: 700; padding-top: 8px; }
-  .empty { color: var(--muted); }
-  #pay { display: none; margin-top: 12px; text-align: center; text-decoration: none; background: var(--good); color: #fff; padding: 12px; border-radius: 8px; font-weight: 600; }
-  #status { color: var(--muted); min-height: 1.5em; margin-top: 8px; }
+:root {
+  --ink: #1d2433;
+  --muted: #5d6678;
+  --paper: #f6f8fb;
+  --panel: #ffffff;
+  --line: #d9dfe9;
+  --accent: #0b5fff;
+  --good: #0a7a4b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+h1 { font-size: 1.8rem; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 20px; }
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+button {
+  font: inherit;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+
+button.listening {
+  background: #d92d20;
+  border-color: #d92d20;
+  color: white;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+input[type=text] {
+  flex: 1;
+  min-width: 180px;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+#log {
+  margin: 20px 0;
+  display: grid;
+  gap: 8px;
+}
+
+.msg {
+  padding: 10px 14px;
+  border-radius: 10px;
+  max-width: 90%;
+  overflow-wrap: anywhere;
+}
+
+.you {
+  background: #e6eefc;
+  justify-self: end;
+}
+
+.agent {
+  background: white;
+  border: 1px solid var(--line);
+}
+
+.cart {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.cart h2 { font-size: 1.05rem; margin: 0 0 8px; }
+
+.cart ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cart li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.cart .total {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  padding-top: 10px;
+}
+
+.empty { color: var(--muted); }
+
+#pay {
+  display: none;
+  margin-top: 12px;
+  text-align: center;
+  text-decoration: none;
+  background: var(--good);
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+#status {
+  color: var(--muted);
+  min-height: 1.5em;
+  margin-top: 8px;
+}
 </style>
 </head>
+
 <body>
 <main>
-  <h1>VoiceCart &#128722;</h1>
-  <p class="sub">Press Speak and say something like "add running shoes to my cart".</p>
 
-  <div class="row">
-    <button id="speak" class="primary">&#127908; Speak</button>
-    <button id="reset">Clear cart</button>
-    <button id="payNow">Checkout</button>
-  </div>
-  <div class="row" style="margin-top:8px">
-    <input id="typed" type="text" placeholder="Or type a command and press Enter">
-    <button id="send">Send</button>
-  </div>
-  <div id="status"></div>
+<h1>VoiceCart 🛒</h1>
 
-  <div id="log" aria-live="polite"></div>
+<p class="sub">
+Press Speak and say something like
+"add running shoes to my cart".
+</p>
 
-  <section class="cart">
-    <h2>Your cart</h2>
-    <div id="cartBody" class="empty">Nothing here yet.</div>
-    <a id="pay" href="#" target="_blank" rel="noopener">Pay with PayPal</a>
-  </section>
+<div class="row">
+  <button id="speak" class="primary">🎤 Speak</button>
+  <button id="reset">Clear cart</button>
+  <button id="payNow">Checkout</button>
+</div>
+
+<div class="row" style="margin-top:8px">
+  <input id="typed" type="text"
+    placeholder="Or type a command and press Enter">
+  <button id="send">Send</button>
+</div>
+
+<div id="status" aria-live="polite"></div>
+
+<div id="log" aria-live="polite"></div>
+
+<section class="cart">
+  <h2>Your cart</h2>
+  <div id="cartBody" class="empty">Nothing here yet.</div>
+  <a id="pay" href="#" target="_blank" rel="noopener">
+    Pay with PayPal
+  </a>
+</section>
+
 </main>
 
 <script>
-const log = document.getElementById("log");
-const statusEl = document.getElementById("status");
 const speakBtn = document.getElementById("speak");
-const typed = document.getElementById("typed");
-const pay = document.getElementById("pay");
+const resetBtn = document.getElementById("reset");
+const payNowBtn = document.getElementById("payNow");
+const sendBtn = document.getElementById("send");
+const typedInput = document.getElementById("typed");
+const statusBox = document.getElementById("status");
+const logBox = document.getElementById("log");
+const cartBody = document.getElementById("cartBody");
+const payLink = document.getElementById("pay");
 
-function addMsg(who, text) {
-  const d = document.createElement("div");
-  d.className = "msg " + (who === "You" ? "you" : "agent");
-  d.textContent = who + ": " + text;
-  log.appendChild(d);
-  d.scrollIntoView({ behavior: "smooth", block: "end" });
+// Browser speech recognition
+const SpeechRecognition =
+  window.SpeechRecognition ||
+  window.webkitSpeechRecognition;
+
+let recognition = null;
+let isListening = false;
+
+function setStatus(message) {
+  statusBox.textContent = message;
 }
 
-function renderCart(cart) {
-  const body = document.getElementById("cartBody");
-  if (!cart || !cart.items.length) {
-    body.className = "empty";
-    body.textContent = "Nothing here yet.";
+function addMessage(message, type) {
+  const div = document.createElement("div");
+  div.className = "msg " + type;
+  div.textContent = message;
+  logBox.appendChild(div);
+}
+
+function speakReply(message) {
+  if (!("speechSynthesis" in window)) return;
+
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(message);
+  utterance.lang = "en-IN";
+  utterance.rate = 1;
+
+  window.speechSynthesis.speak(utterance);
+}
+
+// Display cart
+function refreshCart() {
+  fetch("/cart")
+    .then(response => {
+      if (!response.ok) throw new Error("Cart request failed");
+      return response.json();
+    })
+    .then(renderCart)
+    .catch(error => {
+      console.error("Cart error:", error);
+      setStatus("Could not refresh cart.");
+    });
+}
+
+function renderCart(data) {
+  cartBody.replaceChildren();
+
+  if (!data.items || data.items.length === 0) {
+    cartBody.textContent = "Nothing here yet.";
+    cartBody.className = "empty";
+    payLink.style.display = "none";
     return;
   }
-  body.className = "";
+
+  cartBody.className = "";
+
   const ul = document.createElement("ul");
-  cart.items.forEach(i => {
+
+  data.items.forEach(item => {
     const li = document.createElement("li");
-    li.textContent = i.qty + " \u00D7 " + i.name;
+
+    const name = document.createElement("span");
+    name.textContent = item.name + " × " + item.qty;
+
     const price = document.createElement("span");
-    price.textContent = "$" + i.line_total.toFixed(2);
-    li.appendChild(price);
+    price.textContent = "$" +
+      Number(item.line_total).toFixed(2);
+
+    li.append(name, price);
     ul.appendChild(li);
   });
+
   const total = document.createElement("div");
   total.className = "total";
-  total.innerHTML = "<span>Total</span><span>$" + cart.total.toFixed(2) + "</span>";
-  body.replaceChildren(ul, total);
+
+  const totalLabel = document.createElement("span");
+  totalLabel.textContent = "Total";
+
+  const totalPrice = document.createElement("span");
+  totalPrice.textContent = "$" +
+    Number(data.total).toFixed(2);
+
+  total.append(totalLabel, totalPrice);
+  cartBody.append(ul, total);
 }
 
-function speak(text) {
-  if (!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
-}
+// Send command to FastAPI
+async function sendCommand(command) {
+  if (!command.trim()) return;
 
-async function sendText(text) {
-  text = text.trim();
-  if (!text) return;
-  addMsg("You", text);
-  statusEl.textContent = "Thinking...";
+  addMessage(command, "you");
+  typedInput.value = "";
+  setStatus("Processing your command...");
+
   try {
-    const res = await fetch("/chat", {
+    const response = await fetch("/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text })
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ text: command })
     });
-    if (!res.ok) throw new Error("Server returned " + res.status);
-    const data = await res.json();
-    addMsg("Agent", data.reply);
-    renderCart(data.cart);
-    speak(data.reply);
+
+    if (!response.ok) {
+      throw new Error("Server returned " + response.status);
+    }
+
+    const data = await response.json();
+
+    addMessage(data.reply, "agent");
+    speakReply(data.reply);
+
+    if (data.cart) {
+      renderCart(data.cart);
+    }
+
     if (data.checkout_url) {
-      pay.href = data.checkout_url;
-      pay.style.display = "block";
+      payLink.href = data.checkout_url;
+      payLink.style.display = "block";
     }
-    statusEl.textContent = "";
-  } catch (err) {
-    statusEl.textContent = "Could not reach the server: " + err.message;
+
+    setStatus("Ready.");
+
+  } catch (error) {
+    console.error("Chat error:", error);
+    setStatus("Could not connect to VoiceCart. Check the server.");
+    addMessage("Sorry, something went wrong. Please try again.", "agent");
   }
 }
 
-// Voice input (Chrome / Edge)
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null;
-if (SR) {
-  rec = new SR();
-  rec.lang = "en-IN";
-  rec.interimResults = false;
-  rec.maxAlternatives = 1;
-  rec.onstart = () => { speakBtn.classList.add("listening"); statusEl.textContent = "Listening..."; };
-  rec.onend = () => { speakBtn.classList.remove("listening"); };
-  rec.onerror = e => { statusEl.textContent = "Microphone error: " + e.error; };
-  rec.onresult = e => sendText(e.results[0][0].transcript);
+// Initialize speech recognition
+function setupSpeechRecognition() {
+
+  if (!SpeechRecognition) {
+    setStatus(
+      "Speech recognition is not supported in this browser. " +
+      "Please use a recent version of Google Chrome."
+    );
+    speakBtn.disabled = true;
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+
+  recognition.lang = "en-IN";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = function() {
+    isListening = true;
+    speakBtn.textContent = "🔴 Listening...";
+    speakBtn.classList.add("listening");
+    setStatus("Listening. Please speak now.");
+  };
+
+  recognition.onresult = function(event) {
+    const transcript =
+      event.results[0][0].transcript.trim();
+
+    setStatus("You said: " + transcript);
+    sendCommand(transcript);
+  };
+
+  recognition.onerror = function(event) {
+    console.error("Speech recognition error:", event.error);
+
+    const messages = {
+      "not-allowed": "Microphone permission denied. Allow it in Chrome settings.",
+      "service-not-allowed": "Speech recognition service is not allowed.",
+      "no-speech": "No speech detected. Please try again.",
+      "audio-capture": "No microphone was detected by the browser.",
+      "network": "Speech recognition network error. Check your internet connection.",
+      "aborted": "Listening was stopped."
+    };
+
+    setStatus(messages[event.error] || 
+      "Microphone error: " + event.error);
+  };
+
+  recognition.onend = function() {
+    isListening = false;
+    speakBtn.textContent = "🎤 Speak";
+    speakBtn.classList.remove("listening");
+  };
 }
 
-speakBtn.onclick = () => {
-  if (!rec) { statusEl.textContent = "Voice input needs Chrome or Edge. You can type instead."; return; }
-  rec.start();
-};
-document.getElementById("send").onclick = () => { sendText(typed.value); typed.value = ""; };
-typed.addEventListener("keydown", e => { if (e.key === "Enter") { sendText(typed.value); typed.value = ""; } });
-document.getElementById("payNow").onclick = async () => {
-  statusEl.textContent = "Creating PayPal order...";
+// Speak button
+speakBtn.addEventListener("click", function() {
+
+  if (!recognition) {
+    setupSpeechRecognition();
+  }
+
+  if (!recognition) return;
+
   try {
-    const res = await fetch("/checkout", { method: "POST" });
-    const data = await res.json();
-    if (data.approval_url) {
-      pay.href = data.approval_url;
-      pay.style.display = "block";
-      statusEl.textContent = "Ready. Click Pay with PayPal below.";
-      pay.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (isListening) {
+      recognition.stop();
     } else {
-      statusEl.textContent = data.error || "Checkout failed.";
+      recognition.start();
     }
-  } catch (err) {
-    statusEl.textContent = "Could not reach the server: " + err.message;
+  } catch (error) {
+    console.error("Microphone start error:", error);
+    setStatus("Could not start microphone. Please try again.");
   }
-};
-document.getElementById("reset").onclick = async () => {
-  await fetch("/reset", { method: "POST" });
-  renderCart(null);
-  pay.style.display = "none";
-  log.replaceChildren();
-};
+});
+
+// Typed commands
+sendBtn.addEventListener("click", function() {
+  sendCommand(typedInput.value);
+});
+
+typedInput.addEventListener("keydown", function(event) {
+  if (event.key === "Enter") {
+    sendCommand(typedInput.value);
+  }
+});
+
+// Clear cart
+resetBtn.addEventListener("click", async function() {
+  try {
+    const response = await fetch("/reset", {
+      method: "POST"
+    });
+
+    if (!response.ok) throw new Error("Reset failed");
+
+    logBox.replaceChildren();
+    payLink.style.display = "none";
+    setStatus("Cart cleared successfully.");
+    refreshCart();
+
+  } catch (error) {
+    console.error(error);
+    setStatus("Could not clear the cart.");
+  }
+});
+
+// Checkout
+payNowBtn.addEventListener("click", async function() {
+  try {
+    setStatus("Preparing PayPal checkout...");
+
+    const response = await fetch("/checkout", {
+      method: "POST"
+    });
+
+    if (!response.ok) throw new Error("Checkout failed");
+
+    const data = await response.json();
+
+    if (data.error) {
+      setStatus(data.error);
+      return;
+    }
+
+    if (data.approval_url) {
+      payLink.href = data.approval_url;
+      payLink.style.display = "block";
+      window.location.href = data.approval_url;
+    }
+
+  } catch (error) {
+    console.error("Checkout error:", error);
+    setStatus("Checkout failed. Please check your PayPal settings.");
+  }
+});
+
+// Start application
+setupSpeechRecognition();
+refreshCart();
+
+window.addEventListener("focus", refreshCart);
+
+document.addEventListener("visibilitychange", function() {
+  if (document.visibilityState === "visible") {
+    refreshCart();
+  }
+});
 </script>
+
 </body>
 </html>
